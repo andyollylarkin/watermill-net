@@ -16,36 +16,22 @@ import (
 type sub struct {
 	Topic   string
 	MsgChan chan *message.Message // client message chan
+	ReadCh  chan []byte
+	Closed  bool
 }
 
 type Subscriber struct {
-	conn                 Connection
-	closed               bool
-	addr                 net.Addr
-	mu                   sync.RWMutex
-	subscribers          []*sub
-	subscribersReadChans []chan []byte
-	processWg            sync.WaitGroup
-	marshaler            Marshaler
-	unmarshaler          Unmarshaler
-	logger               watermill.LoggerAdapter
-	done                 chan struct{}
-	started              bool
-}
-
-func (s *Subscriber) findSubscribersByTopic(topic string) []*sub {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	out := make([]*sub, 0)
-
-	for _, s := range s.subscribers {
-		if s.Topic == topic {
-			out = append(out, s)
-		}
-	}
-
-	return out
+	conn        Connection
+	closed      bool
+	addr        net.Addr
+	mu          sync.RWMutex
+	subscribers []*sub
+	processWg   sync.WaitGroup
+	marshaler   Marshaler
+	unmarshaler Unmarshaler
+	logger      watermill.LoggerAdapter
+	done        chan struct{}
+	started     bool
 }
 
 // Subscribe returns output channel with messages from provided topic.
@@ -75,18 +61,20 @@ func (s *Subscriber) Subscribe(ctx context.Context, topic string) (<-chan *messa
 	sub := &sub{
 		Topic:   topic,
 		MsgChan: outCh,
+		ReadCh:  readCh,
+		Closed:  false,
 	}
 	s.subscribers = append(s.subscribers, sub)
-	s.subscribersReadChans = append(s.subscribersReadChans, readCh)
 
-	go s.handle(ctx, readCh)
+	s.processWg.Add(1)
+	go s.handle(ctx, readCh, sub)
 
 	return outCh, nil
 }
 
 // Connect establish connection.
 // Pass listener for accept new connection or pass existed connection. Not both!
-func (s *Subscriber) Connect(ctx context.Context, l Listener, conn Connection) error {
+func (s *Subscriber) Connect(l Listener, conn Connection) error {
 	if l != nil && conn != nil {
 		return fmt.Errorf("pass listener or conn, not both")
 	}
@@ -99,80 +87,96 @@ func (s *Subscriber) Connect(ctx context.Context, l Listener, conn Connection) e
 	}
 
 	if l != nil {
-		c, err := l.Accept()
+		conn, err := l.Accept()
 		if err != nil {
 			return err
 		}
 
-		s.conn = c
+		s.conn = conn
 		s.started = true
 	} else {
 		s.conn = conn
 		s.started = true
 	}
 
-	go s.readContent(ctx)
+	go s.readContent()
 
 	return nil
 }
 
-func (s *Subscriber) handle(ctx context.Context, readCh <-chan []byte) { //nolint: gocognit
-	s.processWg.Add(1)
+func (s *Subscriber) handle(ctx context.Context, readCh <-chan []byte, sub *sub) { //nolint: gocognit,funlen
+	defer s.processWg.Done()
 
-	go func() {
-		defer s.processWg.Done()
-
-		for {
-			select {
-			case <-ctx.Done():
-				if s.logger != nil {
-					s.logger.Error("Read channel closed. Done consume.", ctx.Err(), nil)
-				}
-
-				return
-			case <-s.done:
-				return
-			case msgBody, ok := <-readCh:
-				if !ok {
-					if s.logger != nil {
-						s.logger.Debug("Read channel closed. Done consume.", nil)
-					}
-
-					return
-				}
-
-				var msg internal.Message
-
-				err := s.unmarshaler.UnmarshalMessage(msgBody, &msg)
-				if err != nil {
-					if s.logger != nil {
-						s.logger.Error("Error unmarshal incoming message", err, nil)
-					}
-
-					continue
-				}
-
-				subs := s.findSubscribersByTopic(msg.Topic)
-
-				// send message to sub chan and wait ack or nack
-				for _, sub := range subs {
-					sub.MsgChan <- msg.Message
-					select {
-					case <-msg.Message.Acked():
-						err = s.sendAck(true, msg.Message.UUID)
-						if err != nil {
-							continue
-						}
-					case <-msg.Message.Nacked():
-						err = s.sendAck(false, msg.Message.UUID)
-						if err != nil {
-							continue
-						}
-					}
-				}
+	for {
+		select {
+		case <-ctx.Done():
+			if s.logger != nil {
+				s.logger.Error("Done consume.", ctx.Err(), nil)
 			}
+
+			s.mu.Lock()
+			sub.Closed = true
+			close(sub.MsgChan)
+			s.mu.Unlock()
+
+			return
+		case <-s.done:
+			return
+		case msgBody, ok := <-readCh:
+			if !ok {
+				if s.logger != nil {
+					s.logger.Debug("Read channel closed. Done consume.", nil)
+				}
+
+				return
+			}
+
+			s.mu.RLock()
+
+			var msg internal.Message
+
+			err := s.unmarshaler.UnmarshalMessage(msgBody, &msg)
+			if err != nil {
+				if s.logger != nil {
+					s.logger.Error("Error unmarshal incoming message", err, nil)
+				}
+				s.mu.RUnlock()
+
+				continue
+			}
+
+			if msg.Topic != sub.Topic {
+				s.mu.RUnlock()
+
+				continue
+			}
+
+			if !sub.Closed {
+				// send message to sub chan and wait ack or nack
+				sub.MsgChan <- msg.Message
+				select {
+				case <-msg.Message.Acked():
+					err = s.sendAck(true, msg.Message.UUID)
+					if err != nil {
+						s.mu.RUnlock()
+
+						continue
+					}
+				case <-msg.Message.Nacked():
+					err = s.sendAck(false, msg.Message.UUID)
+					if err != nil {
+						s.mu.RUnlock()
+
+						continue
+					}
+				}
+			} else {
+				return
+			}
+
+			s.mu.RUnlock()
 		}
-	}()
+	}
 }
 
 func (s *Subscriber) sendAck(ack bool, uuid string) error {
@@ -180,8 +184,8 @@ func (s *Subscriber) sendAck(ack bool, uuid string) error {
 		UUID:  uuid,
 		Acked: ack,
 	}
-	marshaledAck, err := s.marshaler.MarshalMessage(ackMsg)
 
+	marshaledAck, err := s.marshaler.MarshalMessage(ackMsg)
 	if err != nil {
 		if s.logger != nil {
 			s.logger.Error("Error marshal ack message", err, nil)
@@ -189,6 +193,8 @@ func (s *Subscriber) sendAck(ack bool, uuid string) error {
 
 		return err
 	}
+
+	marshaledAck = internal.PrepareMessageForSend(marshaledAck)
 
 	_, err = s.conn.Write(marshaledAck)
 	if err != nil {
@@ -202,20 +208,20 @@ func (s *Subscriber) sendAck(ack bool, uuid string) error {
 	return nil
 }
 
-func (s *Subscriber) readContent(ctx context.Context) {
+func (s *Subscriber) readContent() {
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
-				return
 			case <-s.done:
 				return
 			default:
 				// TODO: non blocking read
-				s.mu.RLock()
 				r := bufio.NewReader(s.conn)
 
 				lenRaw, err := r.ReadBytes(internal.LenDelimiter)
+
+				s.mu.RLock()
+
 				if err != nil {
 					s.mu.RUnlock()
 
@@ -234,8 +240,8 @@ func (s *Subscriber) readContent(ctx context.Context) {
 					continue
 				}
 
-				for _, rCh := range s.subscribersReadChans {
-					rCh <- respBody
+				for _, sub := range s.subscribers {
+					sub.ReadCh <- respBody
 				}
 				s.mu.RUnlock()
 			}
@@ -246,14 +252,18 @@ func (s *Subscriber) readContent(ctx context.Context) {
 // Close closes all subscriptions with their output channels and flush offsets etc. when needed.
 func (s *Subscriber) Close() error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	for _, v := range s.subscribers {
-		close(v.MsgChan)
+		if !v.Closed {
+			v.Closed = true
+			close(v.MsgChan)
+		}
 	}
 
 	s.closed = true
 	close(s.done)
+
+	s.mu.Unlock()
 
 	s.processWg.Wait()
 
