@@ -1,6 +1,9 @@
 package watermillnet_test
 
-import "net"
+import (
+	"net"
+	"time"
+)
 
 type pipeAddr struct{}
 
@@ -19,31 +22,42 @@ func NewPipeConnection() *PipeConnection {
 	return pc
 }
 
-func (pc *PipeConnection) LocalAddr() string {
-	return pc.LeftSide.LocalAddr().String()
-}
-
-func (pc *PipeConnection) RemoteAddr() string {
-	return pc.LeftSide.RemoteAddr().String()
-}
-
 func (pc *PipeConnection) RemoteSideConn() net.Conn {
 	return pc.RightSide
 }
 
-func (pc *PipeConnection) Read(p []byte) (n int, err error) {
-	return pc.LeftSide.Read(p)
+func (pc *PipeConnection) Read(b []byte) (n int, err error) {
+	return pc.LeftSide.Read(b)
 }
 
-func (pc *PipeConnection) Write(p []byte) (n int, err error) {
-	return pc.LeftSide.Write(p)
+func (pc *PipeConnection) Write(b []byte) (n int, err error) {
+	return pc.LeftSide.Write(b)
 }
 
 func (pc *PipeConnection) Close() error {
 	return pc.LeftSide.Close()
 }
 
-// Establish connection with remote side.
+func (pc *PipeConnection) LocalAddr() net.Addr {
+	return pc.LeftSide.LocalAddr()
+}
+
+func (pc *PipeConnection) RemoteAddr() net.Addr {
+	return pc.LeftSide.RemoteAddr()
+}
+
+func (pc *PipeConnection) SetDeadline(t time.Time) error {
+	return pc.LeftSide.SetDeadline(t)
+}
+
+func (pc *PipeConnection) SetReadDeadline(t time.Time) error {
+	return pc.LeftSide.SetReadDeadline(t)
+}
+
+func (pc *PipeConnection) SetWriteDeadline(t time.Time) error {
+	return pc.LeftSide.SetWriteDeadline(t)
+}
+
 func (pc *PipeConnection) Connect(addr net.Addr) error {
 	return nil
 }
