@@ -15,6 +15,8 @@ func (ic *InvalidConfigError) Error() string {
 }
 
 var (
-	ErrPublisherClosed = errors.New("publisher closed")
-	ErrNacked          = errors.New("remote side sent nack for message")
+	ErrPublisherClosed      = errors.New("publisher closed")
+	ErrSubscriberClosed     = errors.New("subscriber closed")
+	ErrSubscriberNotStarted = errors.New("subscriber not started")
+	ErrNacked               = errors.New("remote side sent nack for message")
 )
