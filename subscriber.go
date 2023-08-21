@@ -3,6 +3,7 @@ package watermillnet
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -131,9 +132,11 @@ func (s *Subscriber) Connect(l Listener, conn Connection) error {
 
 		s.conn = conn
 		s.started = true
-	} else {
+	} else if conn != nil {
 		s.conn = conn
 		s.started = true
+	} else {
+		return errors.New("listener and conn cant be empty both")
 	}
 
 	go s.readContent()
@@ -304,5 +307,9 @@ func (s *Subscriber) Close() error {
 
 	s.processWg.Wait()
 
-	return s.conn.Close()
+	if s.conn != nil {
+		return s.conn.Close()
+	}
+
+	return nil
 }
