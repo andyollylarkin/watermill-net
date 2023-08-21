@@ -29,5 +29,9 @@ func PrepareMessageForSend(baseMsg []byte) []byte {
 }
 
 func ReadLen(baseMsg []byte) uint64 {
-	return byteOrder.Uint64(baseMsg)
+	if len(baseMsg) > 0 {
+		return byteOrder.Uint64(baseMsg)
+	}
+
+	return 0
 }
