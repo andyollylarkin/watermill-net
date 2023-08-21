@@ -80,6 +80,8 @@ func (s *Subscriber) Addr() string {
 // When provided ctx is cancelled, subscriber will close subscribe and close output channel.
 // Provided ctx is set to all produced messages.
 // When Nack or Ack is called on the message, context of the message is canceled.
+// will wait for reconnects and will not exit the read loop when the connection is lost.
+// Since it is impossible to understand whether the remote side will reconnect, this is a mandatory mechanism.
 func (s *Subscriber) Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -230,6 +232,8 @@ func (s *Subscriber) handle(ctx context.Context, readCh <-chan []byte, sub *sub)
 	}
 }
 
+// sendAck send acknowledge message to remote side.
+// if ack = true -> ack, if ack = false -> nack.
 func (s *Subscriber) sendAck(ack bool, uuid string) error {
 	ackMsg := internal.AckMessage{
 		UUID:  uuid,
