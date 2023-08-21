@@ -31,7 +31,7 @@ type Publisher struct {
 }
 
 func NewPublisher(config PublisherConfig) (*Publisher, error) {
-	if err := validateConfig(config); err != nil {
+	if err := validatePublisherConfig(config); err != nil {
 		return nil, err
 	}
 
@@ -45,7 +45,7 @@ func NewPublisher(config PublisherConfig) (*Publisher, error) {
 	return p, nil
 }
 
-func validateConfig(c PublisherConfig) error {
+func validatePublisherConfig(c PublisherConfig) error {
 	if c.Addr == nil {
 		return &InvalidConfigError{InvalidField: "Addr", InvalidReason: "cant be nil"}
 	}

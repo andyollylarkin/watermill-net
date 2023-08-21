@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -20,10 +19,15 @@ type sub struct {
 	Closed  bool
 }
 
+type SubscriberConfig struct {
+	Marshaler   Marshaler
+	Unmarshaler Unmarshaler
+	Logger      watermill.LoggerAdapter
+}
+
 type Subscriber struct {
 	conn        Connection
 	closed      bool
-	addr        net.Addr
 	mu          sync.RWMutex
 	subscribers []*sub
 	processWg   sync.WaitGroup
@@ -32,6 +36,39 @@ type Subscriber struct {
 	logger      watermill.LoggerAdapter
 	done        chan struct{}
 	started     bool
+}
+
+func NewSubscriber(config SubscriberConfig) (*Subscriber, error) {
+	if err := validateSubscriberConfig(config); err != nil {
+		return nil, err
+	}
+
+	s := new(Subscriber)
+	s.closed = false
+	s.subscribers = make([]*sub, 0)
+	s.marshaler = config.Marshaler
+	s.unmarshaler = config.Unmarshaler
+	s.logger = config.Logger
+	s.done = make(chan struct{})
+	s.started = false
+
+	return s, nil
+}
+
+func validateSubscriberConfig(c SubscriberConfig) error {
+	if c.Marshaler == nil {
+		return &InvalidConfigError{InvalidField: "Marshaler", InvalidReason: "cant be nil"}
+	}
+
+	if c.Unmarshaler == nil {
+		return &InvalidConfigError{InvalidField: "Unmarshaler", InvalidReason: "cant be nil"}
+	}
+
+	return nil
+}
+
+func (s *Subscriber) Addr() string {
+	return s.conn.LocalAddr().String()
 }
 
 // Subscribe returns output channel with messages from provided topic.
