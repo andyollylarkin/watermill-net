@@ -1,11 +1,11 @@
 package watermillnet
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -264,13 +264,16 @@ func (s *Subscriber) sendAck(ack bool, uuid string) error {
 }
 
 func (s *Subscriber) readContent() {
+	var readTimeout = time.Second * 3
+
 	for {
 		select {
 		case <-s.done:
 			return
 		default:
 			// TODO: non blocking read
-			r := bufio.NewReader(s.conn)
+			s.conn.SetReadDeadline(time.Now().Add(readTimeout))
+			r := internal.NewTimeoutReader(s.conn, readTimeout)
 
 			lenRaw, err := r.ReadBytes(internal.LenDelimiter)
 
@@ -328,9 +331,11 @@ func (s *Subscriber) Close() error {
 
 	s.processWg.Wait()
 
+	s.mu.Lock()
 	if s.conn != nil {
 		return s.conn.Close()
 	}
+	s.mu.Unlock()
 
 	return nil
 }
