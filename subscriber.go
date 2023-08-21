@@ -127,12 +127,28 @@ func (s *Subscriber) Connect(l Listener) error {
 		return err
 	}
 
+	go s.reconnect(l)
+
 	s.conn = conn
 	s.started = true
 
 	go s.readContent()
 
 	return nil
+}
+
+// reconnect wait new connection and replace existed connection.
+func (s *Subscriber) reconnect(l Listener) {
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			return
+		}
+
+		s.mu.Lock()
+		s.conn = conn
+		s.mu.Unlock()
+	}
 }
 
 func (s *Subscriber) handle(ctx context.Context, readCh <-chan []byte, sub *sub) { //nolint: gocognit,funlen
@@ -261,10 +277,9 @@ func (s *Subscriber) readContent() {
 					s.logger.Error("Error read message", err, nil)
 				}
 
-				s.Close()
 				s.mu.RUnlock()
 
-				break
+				continue
 			}
 
 			readLen := internal.ReadLen(lenRaw[:len(lenRaw)-1]) // trim len delimiter
@@ -278,10 +293,9 @@ func (s *Subscriber) readContent() {
 					s.logger.Error("Error read message", err, nil)
 				}
 
-				s.Close()
 				s.mu.RUnlock()
 
-				break
+				continue
 			}
 
 			for _, sub := range s.subscribers {

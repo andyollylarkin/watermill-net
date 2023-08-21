@@ -33,9 +33,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for m := range sch {
-		fmt.Println(string(m.Payload))
-		m.Nack()
+	sch2, err := s.Subscribe(context.Background(), "test2")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		for m := range sch {
+			fmt.Println(1, string(m.Payload))
+			m.Ack()
+		}
+	}()
+	for m := range sch2 {
+		fmt.Println(2, string(m.Payload))
+		m.Ack()
 	}
 
 }
