@@ -14,7 +14,7 @@ import (
 
 type PublisherConfig struct {
 	Conn        Connection
-	Addr        net.Addr
+	RemoteAddr  net.Addr
 	Marshaler   Marshaler
 	Unmarshaler Unmarshaler
 	Logger      watermill.LoggerAdapter
@@ -37,7 +37,7 @@ func NewPublisher(config PublisherConfig) (*Publisher, error) {
 
 	p := new(Publisher)
 	p.conn = config.Conn
-	p.addr = config.Addr
+	p.addr = config.RemoteAddr
 	p.marshaler = config.Marshaler
 	p.unmarshaler = config.Unmarshaler
 	p.logger = config.Logger
@@ -46,7 +46,7 @@ func NewPublisher(config PublisherConfig) (*Publisher, error) {
 }
 
 func validatePublisherConfig(c PublisherConfig) error {
-	if c.Addr == nil {
+	if c.RemoteAddr == nil {
 		return &InvalidConfigError{InvalidField: "Addr", InvalidReason: "cant be nil"}
 	}
 

@@ -3,7 +3,6 @@ package watermillnet
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -111,10 +110,9 @@ func (s *Subscriber) Subscribe(ctx context.Context, topic string) (<-chan *messa
 }
 
 // Connect establish connection.
-// Pass listener for accept new connection or pass existed connection. Not both!
-func (s *Subscriber) Connect(l Listener, conn Connection) error {
-	if l != nil && conn != nil {
-		return fmt.Errorf("pass listener or conn, not both")
+func (s *Subscriber) Connect(l Listener) error {
+	if l == nil {
+		return fmt.Errorf("listener cant be nil")
 	}
 
 	s.mu.Lock()
@@ -124,20 +122,13 @@ func (s *Subscriber) Connect(l Listener, conn Connection) error {
 		return ErrSubscriberClosed
 	}
 
-	if l != nil {
-		conn, err := l.Accept()
-		if err != nil {
-			return err
-		}
-
-		s.conn = conn
-		s.started = true
-	} else if conn != nil {
-		s.conn = conn
-		s.started = true
-	} else {
-		return errors.New("listener and conn cant be empty both")
+	conn, err := l.Accept()
+	if err != nil {
+		return err
 	}
+
+	s.conn = conn
+	s.started = true
 
 	go s.readContent()
 
@@ -185,6 +176,9 @@ func (s *Subscriber) handle(ctx context.Context, readCh <-chan []byte, sub *sub)
 				continue
 			}
 
+			// create new watermill message bacause after marshal/unmarshal ack/nack channels is nil
+			watermillMsg := message.NewMessage(msg.Message.UUID, msg.Message.Payload)
+
 			if msg.Topic != sub.Topic {
 				s.mu.RUnlock()
 
@@ -193,17 +187,18 @@ func (s *Subscriber) handle(ctx context.Context, readCh <-chan []byte, sub *sub)
 
 			if !sub.Closed {
 				// send message to sub chan and wait ack or nack
-				sub.MsgChan <- msg.Message
+				sub.MsgChan <- watermillMsg
 				select {
-				case <-msg.Message.Acked():
-					err = s.sendAck(true, msg.Message.UUID)
+				case <-watermillMsg.Acked():
+					err = s.sendAck(true, watermillMsg.UUID)
+
 					if err != nil {
 						s.mu.RUnlock()
 
 						continue
 					}
-				case <-msg.Message.Nacked():
-					err = s.sendAck(false, msg.Message.UUID)
+				case <-watermillMsg.Nacked():
+					err = s.sendAck(false, watermillMsg.UUID)
 					if err != nil {
 						s.mu.RUnlock()
 
@@ -249,44 +244,52 @@ func (s *Subscriber) sendAck(ack bool, uuid string) error {
 }
 
 func (s *Subscriber) readContent() {
-	go func() {
-		for {
-			select {
-			case <-s.done:
-				return
-			default:
-				// TODO: non blocking read
-				r := bufio.NewReader(s.conn)
+	for {
+		select {
+		case <-s.done:
+			return
+		default:
+			// TODO: non blocking read
+			r := bufio.NewReader(s.conn)
 
-				lenRaw, err := r.ReadBytes(internal.LenDelimiter)
+			lenRaw, err := r.ReadBytes(internal.LenDelimiter)
 
-				s.mu.RLock()
+			s.mu.RLock()
 
-				if err != nil {
-					s.mu.RUnlock()
-
-					continue
+			if err != nil {
+				if s.logger != nil {
+					s.logger.Error("Error read message", err, nil)
 				}
 
-				readLen := internal.ReadLen(lenRaw[:len(lenRaw)-1]) // trim len delimiter
-				lr := io.LimitReader(r, int64(readLen))
-
-				respBody := make([]byte, readLen)
-
-				_, err = lr.Read(respBody)
-				if err != nil {
-					s.mu.RUnlock()
-
-					continue
-				}
-
-				for _, sub := range s.subscribers {
-					sub.ReadCh <- respBody
-				}
+				s.Close()
 				s.mu.RUnlock()
+
+				break
 			}
+
+			readLen := internal.ReadLen(lenRaw[:len(lenRaw)-1]) // trim len delimiter
+			lr := io.LimitReader(r, int64(readLen))
+
+			respBody := make([]byte, readLen)
+
+			_, err = lr.Read(respBody)
+			if err != nil {
+				if s.logger != nil {
+					s.logger.Error("Error read message", err, nil)
+				}
+
+				s.Close()
+				s.mu.RUnlock()
+
+				break
+			}
+
+			for _, sub := range s.subscribers {
+				sub.ReadCh <- respBody
+			}
+			s.mu.RUnlock()
 		}
-	}()
+	}
 }
 
 // Close closes all subscriptions with their output channels and flush offsets etc. when needed.

@@ -9,7 +9,7 @@ import (
 type TCP4Connection struct {
 	dialer         net.Dialer
 	underlyingConn net.Conn
-	mu             sync.Mutex
+	mu             sync.RWMutex
 	Closed         bool
 }
 
@@ -24,8 +24,8 @@ func NewTCPConnection(dialer net.Dialer) *TCP4Connection {
 // Read can be made to time out and return an error after a fixed
 // time limit; see SetDeadline and SetReadDeadline.
 func (tc *TCP4Connection) Read(b []byte) (n int, err error) {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
 
 	if tc.underlyingConn == nil {
 		return 0, ErrNotConnected
@@ -38,8 +38,8 @@ func (tc *TCP4Connection) Read(b []byte) (n int, err error) {
 // Write can be made to time out and return an error after a fixed
 // time limit; see SetDeadline and SetWriteDeadline.
 func (tc *TCP4Connection) Write(b []byte) (n int, err error) {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
 
 	if tc.underlyingConn == nil {
 		return 0, ErrNotConnected
@@ -51,8 +51,8 @@ func (tc *TCP4Connection) Write(b []byte) (n int, err error) {
 // Close closes the connection.
 // Any blocked Read or Write operations will be unblocked and return errors.
 func (tc *TCP4Connection) Close() error {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
 
 	if tc.underlyingConn == nil {
 		return ErrNotConnected
@@ -65,8 +65,8 @@ func (tc *TCP4Connection) Close() error {
 
 // LocalAddr returns the local network address, if known.
 func (tc *TCP4Connection) LocalAddr() net.Addr {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
 
 	if tc.underlyingConn == nil {
 		return nil
@@ -77,8 +77,8 @@ func (tc *TCP4Connection) LocalAddr() net.Addr {
 
 // RemoteAddr returns the remote network address, if known.
 func (tc *TCP4Connection) RemoteAddr() net.Addr {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
 
 	if tc.underlyingConn == nil {
 		return nil
@@ -109,8 +109,8 @@ func (tc *TCP4Connection) RemoteAddr() net.Addr {
 //
 // A zero value for t means I/O operations will not time out.
 func (tc *TCP4Connection) SetDeadline(t time.Time) error {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
 
 	if tc.underlyingConn == nil {
 		return ErrNotConnected
@@ -123,6 +123,13 @@ func (tc *TCP4Connection) SetDeadline(t time.Time) error {
 // and any currently-blocked Read call.
 // A zero value for t means Read will not time out.
 func (tc *TCP4Connection) SetReadDeadline(t time.Time) error {
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
+
+	if tc.underlyingConn == nil {
+		return ErrNotConnected
+	}
+
 	return tc.SetReadDeadline(t)
 }
 
@@ -132,8 +139,8 @@ func (tc *TCP4Connection) SetReadDeadline(t time.Time) error {
 // some of the data was successfully written.
 // A zero value for t means Write will not time out.
 func (tc *TCP4Connection) SetWriteDeadline(t time.Time) error {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
 
 	if tc.underlyingConn == nil {
 		return ErrNotConnected
@@ -148,7 +155,7 @@ func (tc *TCP4Connection) Connect(addr net.Addr) error {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 
-	conn, err := tc.dialer.Dial("tcp", addr.String())
+	conn, err := tc.dialer.Dial("tcp4", addr.String())
 	if err != nil {
 		return err
 	}
