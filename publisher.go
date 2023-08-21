@@ -67,6 +67,10 @@ func validatePublisherConfig(c PublisherConfig) error {
 
 // Connect to remote side.
 func (p *Publisher) Connect() error {
+	if p.closed {
+		return ErrPublisherClosed
+	}
+
 	return p.conn.Connect(p.addr)
 }
 

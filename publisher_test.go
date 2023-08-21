@@ -87,6 +87,33 @@ func TestPublishMessageRemoteSideReceiveNackResponse(t *testing.T) {
 	assert.ErrorIs(t, err, watermillnet.ErrNacked)
 }
 
+func TestPublishMessageOnClosedPublisher(t *testing.T) {
+	pipeConn := NewPipeConnection()
+	uuid := watermill.NewUUID()
+	config := watermillnet.PublisherConfig{
+		Conn:        pipeConn,
+		Addr:        pipeAddr{},
+		Marshaler:   pkg.MessagePackMarshaler{},
+		Unmarshaler: pkg.MessagePackUnmarshaler{},
+	}
+
+	go func() {
+		out := make([]byte, 512)
+		rs := pipeConn.RemoteSideConn()
+		rs.Read(out)
+		ackMsg := CreateAckMessage(t, false, uuid)
+		rs.Write(ackMsg)
+	}()
+
+	p, err := watermillnet.NewPublisher(config)
+	require.NoError(t, err)
+	err = p.Close()
+	require.NoError(t, err)
+	err = p.Publish("test_topic", message.NewMessage("", []byte("Hello world")))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, watermillnet.ErrPublisherClosed)
+}
+
 func TestPublisherCreateError(t *testing.T) {
 	// pc := NewPipeConnection()
 	tc := []struct {
@@ -214,4 +241,34 @@ func TestPublishMultiMessage(t *testing.T) {
 	err = p.Publish("test_topic", message.NewMessage("", []byte("Hello world")), //send 2 messages
 		message.NewMessage("", []byte("Hello world2")))
 	require.NoError(t, err)
+}
+
+func TestConnectOnClosedPublisher(t *testing.T) {
+	c := watermillnet.PublisherConfig{
+		Conn:        NewPipeConnection(),
+		Addr:        pipeAddr{},
+		Marshaler:   pkg.MessagePackMarshaler{},
+		Unmarshaler: pkg.MessagePackUnmarshaler{},
+	}
+
+	p, err := watermillnet.NewPublisher(c)
+	assert.NoError(t, err)
+	err = p.Close()
+	assert.NoError(t, err)
+	err = p.Connect()
+	assert.ErrorIs(t, err, watermillnet.ErrPublisherClosed)
+}
+
+func TestConnectOK(t *testing.T) {
+	c := watermillnet.PublisherConfig{
+		Conn:        NewPipeConnection(),
+		Addr:        pipeAddr{},
+		Marshaler:   pkg.MessagePackMarshaler{},
+		Unmarshaler: pkg.MessagePackUnmarshaler{},
+	}
+
+	p, err := watermillnet.NewPublisher(c)
+	assert.NoError(t, err)
+	err = p.Connect()
+	assert.NoError(t, err)
 }
