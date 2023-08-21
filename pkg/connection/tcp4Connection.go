@@ -130,7 +130,7 @@ func (tc *TCP4Connection) SetReadDeadline(t time.Time) error {
 		return ErrNotConnected
 	}
 
-	return tc.SetReadDeadline(t)
+	return tc.underlyingConn.SetReadDeadline(t)
 }
 
 // SetWriteDeadline sets the deadline for future Write calls
