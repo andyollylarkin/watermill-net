@@ -23,6 +23,8 @@ type SubscriberConfig struct {
 	Marshaler   Marshaler
 	Unmarshaler Unmarshaler
 	Logger      watermill.LoggerAdapter
+	// Pass exited connection for use same transport (socket) for publisher and subscriber.
+	Connection Connection
 }
 
 type Subscriber struct {
@@ -51,6 +53,10 @@ func NewSubscriber(config SubscriberConfig) (*Subscriber, error) {
 	s.logger = config.Logger
 	s.done = make(chan struct{})
 	s.started = false
+
+	if config.Connection != nil {
+		s.conn = config.Connection
+	}
 
 	return s, nil
 }
@@ -124,14 +130,18 @@ func (s *Subscriber) Connect(l Listener) error {
 		return ErrSubscriberClosed
 	}
 
-	conn, err := l.Accept()
-	if err != nil {
-		return err
+	// if connection was passed in the config, dont accept new connection, use existed instead.
+	if s.conn != nil {
+		conn, err := l.Accept()
+		if err != nil {
+			return err
+		}
+
+		s.conn = conn
+
+		go s.reconnect(l)
 	}
 
-	go s.reconnect(l)
-
-	s.conn = conn
 	s.started = true
 
 	go s.readContent()
