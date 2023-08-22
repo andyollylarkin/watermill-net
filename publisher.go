@@ -149,7 +149,6 @@ func (p *Publisher) handleResponse() error {
 	}
 
 	if !ackMsg.Acked {
-		// TODO: handle nack for resend?
 		return fmt.Errorf("%w: %s", ErrNacked, ackMsg.UUID)
 	}
 

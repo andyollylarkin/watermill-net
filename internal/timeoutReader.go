@@ -12,6 +12,8 @@ type TimeoutReader struct {
 	extendReadDeadline time.Duration
 }
 
+// Return reader that reads from r. If i/o timeout exceeded reader continue read.
+// If another error occurs reader return that error.
 func NewTimeoutReader(r ReadDeadliner, extendReadDeadline time.Duration) *TimeoutReader {
 	tr := new(TimeoutReader)
 	tr.r = r

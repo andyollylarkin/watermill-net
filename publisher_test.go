@@ -42,7 +42,7 @@ func TestPublishMessageRemoteSideReceiveOK(t *testing.T) {
 	uuid := watermill.NewUUID()
 	config := watermillnet.PublisherConfig{
 		Conn:        pipeConn,
-		Addr:        pipeAddr{},
+		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -66,7 +66,7 @@ func TestPublishMessageRemoteSideReceiveNackResponse(t *testing.T) {
 	uuid := watermill.NewUUID()
 	config := watermillnet.PublisherConfig{
 		Conn:        pipeConn,
-		Addr:        pipeAddr{},
+		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -92,7 +92,7 @@ func TestPublishMessageOnClosedPublisher(t *testing.T) {
 	uuid := watermill.NewUUID()
 	config := watermillnet.PublisherConfig{
 		Conn:        pipeConn,
-		Addr:        pipeAddr{},
+		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -125,7 +125,7 @@ func TestPublisherCreateError(t *testing.T) {
 			name: "Err Conn nil",
 			config: watermillnet.PublisherConfig{
 				Conn:        nil,
-				Addr:        pipeAddr{},
+				RemoteAddr:  pipeAddr{},
 				Marshaler:   pkg.MessagePackMarshaler{},
 				Unmarshaler: pkg.MessagePackUnmarshaler{},
 			},
@@ -135,7 +135,7 @@ func TestPublisherCreateError(t *testing.T) {
 			name: "Err Addr nil",
 			config: watermillnet.PublisherConfig{
 				Conn:        &PipeConnection{},
-				Addr:        nil,
+				RemoteAddr:  nil,
 				Marshaler:   pkg.MessagePackMarshaler{},
 				Unmarshaler: pkg.MessagePackUnmarshaler{},
 			},
@@ -145,7 +145,7 @@ func TestPublisherCreateError(t *testing.T) {
 			name: "Err Marshaler nil",
 			config: watermillnet.PublisherConfig{
 				Conn:        &PipeConnection{},
-				Addr:        pipeAddr{},
+				RemoteAddr:  pipeAddr{},
 				Marshaler:   nil,
 				Unmarshaler: pkg.MessagePackUnmarshaler{},
 			},
@@ -155,7 +155,7 @@ func TestPublisherCreateError(t *testing.T) {
 			name: "Err Unmarshaler nil",
 			config: watermillnet.PublisherConfig{
 				Conn:        &PipeConnection{},
-				Addr:        pipeAddr{},
+				RemoteAddr:  pipeAddr{},
 				Marshaler:   pkg.MessagePackMarshaler{},
 				Unmarshaler: nil,
 			},
@@ -182,7 +182,7 @@ func TestPublisherCreateOK(t *testing.T) {
 			name: "Publisher no error",
 			config: watermillnet.PublisherConfig{
 				Conn:        &PipeConnection{},
-				Addr:        pipeAddr{},
+				RemoteAddr:  pipeAddr{},
 				Marshaler:   pkg.MessagePackMarshaler{},
 				Unmarshaler: pkg.MessagePackUnmarshaler{},
 			},
@@ -201,7 +201,7 @@ func TestPublishToClosedPublisher(t *testing.T) {
 	pipeConn := NewPipeConnection()
 	config := watermillnet.PublisherConfig{
 		Conn:        pipeConn,
-		Addr:        pipeAddr{},
+		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -219,7 +219,7 @@ func TestPublishMultiMessage(t *testing.T) {
 	uuid := watermill.NewUUID()
 	config := watermillnet.PublisherConfig{
 		Conn:        pipeConn,
-		Addr:        pipeAddr{},
+		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -246,7 +246,7 @@ func TestPublishMultiMessage(t *testing.T) {
 func TestConnectOnClosedPublisher(t *testing.T) {
 	c := watermillnet.PublisherConfig{
 		Conn:        NewPipeConnection(),
-		Addr:        pipeAddr{},
+		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -262,7 +262,7 @@ func TestConnectOnClosedPublisher(t *testing.T) {
 func TestConnectOK(t *testing.T) {
 	c := watermillnet.PublisherConfig{
 		Conn:        NewPipeConnection(),
-		Addr:        pipeAddr{},
+		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}

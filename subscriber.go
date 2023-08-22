@@ -271,14 +271,11 @@ func (s *Subscriber) readContent() {
 		case <-s.done:
 			return
 		default:
-			// TODO: non blocking read
+			s.mu.RLock()
 			s.conn.SetReadDeadline(time.Now().Add(readTimeout))
 			r := internal.NewTimeoutReader(s.conn, readTimeout)
 
 			lenRaw, err := r.ReadBytes(internal.LenDelimiter)
-
-			s.mu.RLock()
-
 			if err != nil {
 				if s.logger != nil {
 					s.logger.Error("Error read message", err, nil)
