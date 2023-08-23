@@ -38,5 +38,5 @@ Please join us on the `#watermill` channel on the [Gophers slack](https://gopher
 
 ## TODO
 - [ ] Transport wrapper for reconnection
-- [ ] CI pipeline
+- [x] CI pipeline
 - [ ] More tests for subscriber and publisher
