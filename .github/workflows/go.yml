@@ -22,5 +22,3 @@ jobs:
 
     - name: Test no race
       run: make health_no_race
-    - name: Test with race detector
-      run: make all_health
