@@ -131,7 +131,7 @@ func (s *Subscriber) Connect(l Listener) error {
 	}
 
 	// if connection was passed in the config, dont accept new connection, use existed instead.
-	if s.conn != nil {
+	if s.conn == nil {
 		conn, err := l.Accept()
 		if err != nil {
 			return err
