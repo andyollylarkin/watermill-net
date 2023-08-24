@@ -39,4 +39,6 @@ Please join us on the `#watermill` channel on the [Gophers slack](https://gopher
 ## TODO
 - [x] Transport wrapper for reconnection
 - [x] CI pipeline
+- [x] CI linting
+- [x] CI tests coverage
 - [ ] More tests for subscriber and publisher

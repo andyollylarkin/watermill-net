@@ -17,7 +17,6 @@ import (
 )
 
 type PublisherConfig struct {
-	Conn        Connection
 	RemoteAddr  net.Addr
 	Marshaler   Marshaler
 	Unmarshaler Unmarshaler
@@ -35,13 +34,14 @@ type Publisher struct {
 	waitAck     bool
 }
 
+// NewPublisher create new publisher.
+// ATTENTION! Set connection immediately after creation.
 func NewPublisher(config PublisherConfig, waitAck bool) (*Publisher, error) {
 	if err := validatePublisherConfig(config); err != nil {
 		return nil, err
 	}
 
 	p := new(Publisher)
-	p.conn = config.Conn
 	p.addr = config.RemoteAddr
 	p.marshaler = config.Marshaler
 	p.unmarshaler = config.Unmarshaler
@@ -56,10 +56,6 @@ func validatePublisherConfig(c PublisherConfig) error {
 		return &InvalidConfigError{InvalidField: "Addr", InvalidReason: "cant be nil"}
 	}
 
-	if c.Conn == nil {
-		return &InvalidConfigError{InvalidField: "Conn", InvalidReason: "cant be nil"}
-	}
-
 	if c.Marshaler == nil {
 		return &InvalidConfigError{InvalidField: "Marshaler", InvalidReason: "cant be nil"}
 	}
@@ -71,10 +67,37 @@ func validatePublisherConfig(c PublisherConfig) error {
 	return nil
 }
 
+func (p *Publisher) SetConnection(c Connection) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.conn = c
+}
+
+// GetConnection get publisher connection.
+func (p *Publisher) GetConnection() (Connection, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.conn == nil {
+		return nil, ErrConnectionNotSet
+	}
+
+	if p.closed {
+		return nil, ErrPublisherClosed
+	}
+
+	return p.conn, nil
+}
+
 // Connect to remote side.
 func (p *Publisher) Connect() error {
 	if p.closed {
 		return ErrPublisherClosed
+	}
+
+	if p.conn == nil {
+		return ErrConnectionNotSet
 	}
 
 	return p.conn.Connect(p.addr)
@@ -95,6 +118,10 @@ func (p *Publisher) Publish(topic string, messages ...*message.Message) error {
 		return ErrPublisherClosed
 	}
 
+	if p.conn == nil {
+		return ErrConnectionNotSet
+	}
+
 	for _, msg := range messages {
 		m := internal.Message{
 			Topic:   topic,
@@ -108,7 +135,8 @@ func (p *Publisher) Publish(topic string, messages ...*message.Message) error {
 
 		b = internal.PrepareMessageForSend(b)
 
-		err = retry.Do(context.Background(), retry.NewConstant(time.Second*3), func(ctx context.Context) error { //nolint: gomnd
+		//nolint: gomnd
+		err = retry.Do(context.Background(), retry.NewConstant(time.Second*3), func(ctx context.Context) error {
 			_, err = p.conn.Write(b)
 
 			if err != nil {
@@ -180,6 +208,10 @@ func (p *Publisher) handleResponse() error {
 func (p *Publisher) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
+	if p.conn == nil {
+		return ErrConnectionNotSet
+	}
 
 	p.closed = true
 

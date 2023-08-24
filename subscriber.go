@@ -23,8 +23,6 @@ type SubscriberConfig struct {
 	Marshaler   Marshaler
 	Unmarshaler Unmarshaler
 	Logger      watermill.LoggerAdapter
-	// Pass exited connection for use same transport (socket) for publisher and subscriber.
-	Connection Connection
 }
 
 type Subscriber struct {
@@ -40,6 +38,8 @@ type Subscriber struct {
 	started     bool
 }
 
+// NewSubscriber create new subscriber.
+// ATTENTION! Set connection immediately after creation.
 func NewSubscriber(config SubscriberConfig) (*Subscriber, error) {
 	if err := validateSubscriberConfig(config); err != nil {
 		return nil, err
@@ -53,10 +53,6 @@ func NewSubscriber(config SubscriberConfig) (*Subscriber, error) {
 	s.logger = config.Logger
 	s.done = make(chan struct{})
 	s.started = false
-
-	if config.Connection != nil {
-		s.conn = config.Connection
-	}
 
 	return s, nil
 }
@@ -74,6 +70,9 @@ func validateSubscriberConfig(c SubscriberConfig) error {
 }
 
 func (s *Subscriber) Addr() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.conn.LocalAddr().String()
 }
 
@@ -91,6 +90,10 @@ func (s *Subscriber) Addr() string {
 func (s *Subscriber) Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.conn == nil {
+		return nil, ErrConnectionNotSet
+	}
 
 	if s.closed {
 		return nil, ErrSubscriberClosed
@@ -117,6 +120,29 @@ func (s *Subscriber) Subscribe(ctx context.Context, topic string) (<-chan *messa
 	return outCh, nil
 }
 
+func (s *Subscriber) SetConnection(c Connection) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.conn = c
+}
+
+// GetConnection get publisher connection.
+func (s *Subscriber) GetConnection() (Connection, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.conn == nil {
+		return nil, ErrConnectionNotSet
+	}
+
+	if s.closed {
+		return nil, ErrPublisherClosed
+	}
+
+	return s.conn, nil
+}
+
 // Connect establish connection.
 func (s *Subscriber) Connect(l Listener) error {
 	if l == nil {
@@ -130,7 +156,7 @@ func (s *Subscriber) Connect(l Listener) error {
 		return ErrSubscriberClosed
 	}
 
-	// if connection was passed in the config, dont accept new connection, use existed instead.
+	// if connection was set, dont accept new connection, use existed instead.
 	if s.conn == nil {
 		conn, err := l.Accept()
 		if err != nil {
@@ -340,6 +366,8 @@ func (s *Subscriber) Close() error {
 
 	s.mu.Lock()
 	if s.conn != nil {
+		s.mu.Unlock()
+
 		return s.conn.Close()
 	}
 	s.mu.Unlock()

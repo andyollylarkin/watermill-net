@@ -20,4 +20,5 @@ var (
 	ErrSubscriberNotStarted = errors.New("subscriber not started")
 	ErrNacked               = errors.New("remote side sent nack for message")
 	ErrIOTimeout            = errors.New("i/o timeout")
+	ErrConnectionNotSet     = errors.New("connection not set")
 )
