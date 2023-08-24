@@ -16,7 +16,7 @@ import (
 
 func main() {
 
-	pConn := connection.NewTCPConnection(net.Dialer{})
+	pConn := connection.NewTCPConnection(net.Dialer{}, time.Second*30)
 
 	addr := &net.TCPAddr{IP: []byte{127, 0, 0, 1}, Port: 9090}
 

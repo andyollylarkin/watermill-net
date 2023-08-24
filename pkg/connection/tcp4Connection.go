@@ -9,13 +9,15 @@ import (
 type TCP4Connection struct {
 	dialer         net.Dialer
 	underlyingConn net.Conn
+	keepAlive      time.Duration
 	mu             sync.RWMutex
 	Closed         bool
 }
 
-func NewTCPConnection(dialer net.Dialer) *TCP4Connection {
+func NewTCPConnection(dialer net.Dialer, keepAlive time.Duration) *TCP4Connection {
 	c := new(TCP4Connection)
 	c.dialer = dialer
+	c.dialer.KeepAlive = keepAlive
 
 	return c
 }
