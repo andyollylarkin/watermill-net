@@ -32,9 +32,10 @@ type Publisher struct {
 	logger      watermill.LoggerAdapter
 	closed      bool
 	mu          sync.Mutex
+	waitAck     bool
 }
 
-func NewPublisher(config PublisherConfig) (*Publisher, error) {
+func NewPublisher(config PublisherConfig, waitAck bool) (*Publisher, error) {
 	if err := validatePublisherConfig(config); err != nil {
 		return nil, err
 	}
@@ -45,6 +46,7 @@ func NewPublisher(config PublisherConfig) (*Publisher, error) {
 	p.marshaler = config.Marshaler
 	p.unmarshaler = config.Unmarshaler
 	p.logger = config.Logger
+	p.waitAck = waitAck
 
 	return p, nil
 }
@@ -106,21 +108,29 @@ func (p *Publisher) Publish(topic string, messages ...*message.Message) error {
 
 		b = internal.PrepareMessageForSend(b)
 
-		retry.Do(context.Background(), retry.NewConstant(time.Second*3), func(ctx context.Context) error { //nolint: gomnd
+		err = retry.Do(context.Background(), retry.NewConstant(time.Second*3), func(ctx context.Context) error { //nolint: gomnd
 			_, err = p.conn.Write(b)
 
 			if err != nil {
 				return err
 			}
 
-			if err = p.handleResponse(); err != nil { // wait ack or nack
-				if errors.Is(err, ErrIOTimeout) {
-					return retry.RetryableError(err)
+			if p.waitAck {
+				if err = p.handleResponse(); err != nil { // wait ack or nack
+					if errors.Is(err, ErrIOTimeout) {
+						return retry.RetryableError(err)
+					}
+
+					return err
 				}
 			}
 
 			return nil
 		})
+
+		if err != nil {
+			return err
+		}
 
 		if p.logger != nil {
 			fields := watermill.LogFields{

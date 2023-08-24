@@ -55,7 +55,7 @@ func TestPublishMessageRemoteSideReceiveOK(t *testing.T) {
 		rs.Write(ackMsg)
 	}()
 
-	p, err := watermillnet.NewPublisher(config)
+	p, err := watermillnet.NewPublisher(config, true)
 	require.NoError(t, err)
 	err = p.Publish("test_topic", message.NewMessage("", []byte("Hello world")))
 	require.NoError(t, err)
@@ -79,7 +79,7 @@ func TestPublishMessageRemoteSideReceiveNackResponse(t *testing.T) {
 		rs.Write(ackMsg)
 	}()
 
-	p, err := watermillnet.NewPublisher(config)
+	p, err := watermillnet.NewPublisher(config, true)
 	require.NoError(t, err)
 	err = p.Publish("test_topic", message.NewMessage("", []byte("Hello world")))
 	require.Error(t, err)
@@ -105,7 +105,7 @@ func TestPublishMessageOnClosedPublisher(t *testing.T) {
 		rs.Write(ackMsg)
 	}()
 
-	p, err := watermillnet.NewPublisher(config)
+	p, err := watermillnet.NewPublisher(config, false)
 	require.NoError(t, err)
 	err = p.Close()
 	require.NoError(t, err)
@@ -165,7 +165,7 @@ func TestPublisherCreateError(t *testing.T) {
 
 	for _, c := range tc {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := watermillnet.NewPublisher(c.config)
+			_, err := watermillnet.NewPublisher(c.config, false)
 			assert.Error(t, err)
 			assert.ErrorContains(t, err, c.expected)
 		})
@@ -191,7 +191,7 @@ func TestPublisherCreateOK(t *testing.T) {
 
 	for _, c := range tc {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := watermillnet.NewPublisher(c.config)
+			_, err := watermillnet.NewPublisher(c.config, false)
 			assert.NoError(t, err)
 		})
 	}
@@ -206,7 +206,7 @@ func TestPublishToClosedPublisher(t *testing.T) {
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
 
-	p, err := watermillnet.NewPublisher(config)
+	p, err := watermillnet.NewPublisher(config, false)
 	require.NoError(t, err)
 	err = p.Close()
 	require.NoError(t, err)
@@ -236,7 +236,7 @@ func TestPublishMultiMessage(t *testing.T) {
 		}
 	}()
 
-	p, err := watermillnet.NewPublisher(config)
+	p, err := watermillnet.NewPublisher(config, true)
 	require.NoError(t, err)
 	err = p.Publish("test_topic", message.NewMessage("", []byte("Hello world")), //send 2 messages
 		message.NewMessage("", []byte("Hello world2")))
@@ -251,7 +251,7 @@ func TestConnectOnClosedPublisher(t *testing.T) {
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
 
-	p, err := watermillnet.NewPublisher(c)
+	p, err := watermillnet.NewPublisher(c, false)
 	assert.NoError(t, err)
 	err = p.Close()
 	assert.NoError(t, err)
@@ -267,7 +267,7 @@ func TestConnectOK(t *testing.T) {
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
 
-	p, err := watermillnet.NewPublisher(c)
+	p, err := watermillnet.NewPublisher(c, false)
 	assert.NoError(t, err)
 	err = p.Connect()
 	assert.NoError(t, err)

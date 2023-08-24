@@ -111,7 +111,7 @@ func TestCloseWaitAllConns(t *testing.T) {
 		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
-	})
+	}, false)
 	require.NoError(t, err)
 	err = p.Connect()
 	require.NoError(t, err)
@@ -171,7 +171,7 @@ func TestCloseSocketConn(t *testing.T) {
 		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
-	})
+	}, false)
 	require.NoError(t, err)
 	err = p.Connect()
 	require.NoError(t, err)
@@ -202,7 +202,7 @@ func TestSubscriberCancelByContext(t *testing.T) {
 		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
-	})
+	}, false)
 	require.NoError(t, err)
 	err = p.Connect()
 	require.NoError(t, err)

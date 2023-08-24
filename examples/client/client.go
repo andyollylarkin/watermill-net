@@ -20,7 +20,7 @@ func main() {
 		RemoteAddr:  &net.TCPAddr{IP: []byte{127, 0, 0, 1}, Port: 9090},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
-	})
+	}, false)
 	if err != nil {
 		log.Fatal(err)
 	}

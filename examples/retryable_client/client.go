@@ -29,7 +29,7 @@ func main() {
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 		Logger:      watermill.NewStdLogger(true, true),
-	})
+	}, false)
 	if err != nil {
 		log.Fatal(err)
 	}
