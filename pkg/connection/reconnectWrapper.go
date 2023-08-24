@@ -10,6 +10,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillnet "github.com/andyollylarkin/watermill-net"
+	"github.com/andyollylarkin/watermill-net/internal"
 	"github.com/sethvargo/go-retry"
 )
 
@@ -27,7 +28,7 @@ func (rw *ReconnectWrapper) connectContextAdapter(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("Abort reconnection: %w", ctx.Err())
 	case e := <-connectCh:
 		if e != nil && rw.logger != nil {
 			rw.logger.Info("Error when reconnect. Retry connect.", watermill.LogFields{"error": e.Error()})
@@ -65,6 +66,8 @@ type ReconnectWrapper struct {
 }
 
 // NewReconnectWrapper enrich the underlying connection with a reconnect mechanism.
+// Attention! If the connection is lost, we may not receive confirmation, so read and write operations may return
+// ErrIOTimeout. Correct handling of this situation falls on your shoulders.
 func NewReconnectWrapper(ctx context.Context, baseConn watermillnet.Connection, backoff Backoff,
 	log watermill.LoggerAdapter, remoteAddr net.Addr, efilter ErrorFilter) *ReconnectWrapper { //nolint: gofumpt
 	w := new(ReconnectWrapper)
@@ -77,7 +80,13 @@ func NewReconnectWrapper(ctx context.Context, baseConn watermillnet.Connection, 
 	w.remoteAddr = remoteAddr
 	w.underlyingConnection = baseConn
 	w.logger = log
-	w.ctx = ctx
+
+	if ctx == nil {
+		w.ctx = context.Background()
+	} else {
+		w.ctx = ctx
+	}
+
 	w.errorFilter = efilter
 
 	return w
@@ -133,9 +142,19 @@ func (rw *ReconnectWrapper) Read(b []byte) (n int, err error) {
 	defer rw.mu.RUnlock()
 
 	rw.reconnectLockWait()
+	rw.underlyingConnection.SetReadDeadline(time.Now().Add(time.Minute * 1))
 	n, err = rw.underlyingConnection.Read(b)
 
-	if err != nil {
+	if err != nil { //nolint: nestif
+		// dont reconnect when timeout happens
+		if internal.IsTimeoutError(err) {
+			if rw.logger != nil {
+				rw.logger.Info("Timeout", watermill.LogFields{"op": "read"})
+			}
+
+			return n, ErrIOTimeout
+		}
+
 		if rw.logger != nil {
 			rw.logger.Info("Unable to communicate with the remote side. attempt to reconnect",
 				watermill.LogFields{"op": "read"})
@@ -144,7 +163,6 @@ func (rw *ReconnectWrapper) Read(b []byte) (n int, err error) {
 		rw.reconnectLock()
 		err = rw.reconnect()
 		rw.reconnectUnlock()
-		fmt.Println("AFTER UNLOCK")
 
 		if err != nil {
 			return n, err
@@ -162,9 +180,19 @@ func (rw *ReconnectWrapper) Write(b []byte) (n int, err error) {
 	defer rw.mu.RUnlock()
 
 	rw.reconnectLockWait()
+	rw.underlyingConnection.SetWriteDeadline(time.Now().Add(time.Minute * 1))
 	n, err = rw.underlyingConnection.Write(b)
 
-	if err != nil {
+	if err != nil { //nolint: nestif
+		// dont reconnect when timeout happens
+		if internal.IsTimeoutError(err) {
+			if rw.logger != nil {
+				rw.logger.Info("Timeout", watermill.LogFields{"op": "read"})
+			}
+
+			return n, ErrIOTimeout
+		}
+
 		if rw.logger != nil {
 			rw.logger.Info("Unable to communicate with the remote side. attempt to reconnect",
 				watermill.LogFields{"op": "write"})

@@ -37,6 +37,6 @@ Please join us on the `#watermill` channel on the [Gophers slack](https://gopher
 [MIT License](./LICENSE)
 
 ## TODO
-- [ ] Transport wrapper for reconnection
+- [x] Transport wrapper for reconnection
 - [x] CI pipeline
 - [ ] More tests for subscriber and publisher
