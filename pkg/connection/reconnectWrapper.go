@@ -60,16 +60,16 @@ type ReconnectWrapper struct {
 	logger               watermill.LoggerAdapter
 	errorFilter          ErrorFilter
 	remoteAddr           net.Addr
+	readWriteTimeout     time.Duration
 	lock                 int64 // lock conn wrapper for reconnect wait. 0 -> locked; 1 -> unlocked
 	ctx                  context.Context
 	mu                   sync.RWMutex
 }
 
 // NewReconnectWrapper enrich the underlying connection with a reconnect mechanism.
-// Attention! If the connection is lost, we may not receive confirmation, so read and write operations may return
-// ErrIOTimeout. Correct handling of this situation falls on your shoulders.
 func NewReconnectWrapper(ctx context.Context, baseConn watermillnet.Connection, backoff Backoff,
-	log watermill.LoggerAdapter, remoteAddr net.Addr, efilter ErrorFilter) *ReconnectWrapper { //nolint: gofumpt
+	log watermill.LoggerAdapter, remoteAddr net.Addr, efilter ErrorFilter,
+	readWriteTimeout time.Duration) *ReconnectWrapper { //nolint: gofumpt
 	w := new(ReconnectWrapper)
 	if backoff != nil {
 		w.backoffPolicy = backoff
@@ -80,6 +80,7 @@ func NewReconnectWrapper(ctx context.Context, baseConn watermillnet.Connection, 
 	w.remoteAddr = remoteAddr
 	w.underlyingConnection = baseConn
 	w.logger = log
+	w.readWriteTimeout = readWriteTimeout
 
 	if ctx == nil {
 		w.ctx = context.Background()
@@ -142,7 +143,7 @@ func (rw *ReconnectWrapper) Read(b []byte) (n int, err error) {
 	defer rw.mu.RUnlock()
 
 	rw.reconnectLockWait()
-	rw.underlyingConnection.SetReadDeadline(time.Now().Add(time.Minute * 1))
+	rw.underlyingConnection.SetReadDeadline(time.Now().Add(rw.readWriteTimeout))
 	n, err = rw.underlyingConnection.Read(b)
 
 	if err != nil { //nolint: nestif
@@ -152,7 +153,7 @@ func (rw *ReconnectWrapper) Read(b []byte) (n int, err error) {
 				rw.logger.Info("Timeout", watermill.LogFields{"op": "read"})
 			}
 
-			return n, ErrIOTimeout
+			return n, watermillnet.ErrIOTimeout
 		}
 
 		if rw.logger != nil {
@@ -180,7 +181,7 @@ func (rw *ReconnectWrapper) Write(b []byte) (n int, err error) {
 	defer rw.mu.RUnlock()
 
 	rw.reconnectLockWait()
-	rw.underlyingConnection.SetWriteDeadline(time.Now().Add(time.Minute * 1))
+	rw.underlyingConnection.SetWriteDeadline(time.Now().Add(rw.readWriteTimeout))
 	n, err = rw.underlyingConnection.Write(b)
 
 	if err != nil { //nolint: nestif
@@ -190,7 +191,7 @@ func (rw *ReconnectWrapper) Write(b []byte) (n int, err error) {
 				rw.logger.Info("Timeout", watermill.LogFields{"op": "read"})
 			}
 
-			return n, ErrIOTimeout
+			return n, watermillnet.ErrIOTimeout
 		}
 
 		if rw.logger != nil {

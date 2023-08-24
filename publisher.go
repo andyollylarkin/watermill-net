@@ -2,14 +2,18 @@ package watermillnet
 
 import (
 	"bufio"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/andyollylarkin/watermill-net/internal"
+	"github.com/sethvargo/go-retry"
 )
 
 type PublisherConfig struct {
@@ -101,15 +105,22 @@ func (p *Publisher) Publish(topic string, messages ...*message.Message) error {
 		}
 
 		b = internal.PrepareMessageForSend(b)
-		_, err = p.conn.Write(b)
 
-		if err != nil {
-			return err
-		}
+		retry.Do(context.Background(), retry.NewConstant(time.Second*3), func(ctx context.Context) error { //nolint: gomnd
+			_, err = p.conn.Write(b)
 
-		if err = p.handleResponse(); err != nil { // wait ack or nack
-			return err
-		}
+			if err != nil {
+				return err
+			}
+
+			if err = p.handleResponse(); err != nil { // wait ack or nack
+				if errors.Is(err, ErrIOTimeout) {
+					return retry.RetryableError(err)
+				}
+			}
+
+			return nil
+		})
 
 		if p.logger != nil {
 			fields := watermill.LogFields{

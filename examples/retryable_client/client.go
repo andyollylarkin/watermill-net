@@ -20,17 +20,15 @@ func main() {
 
 	addr := &net.TCPAddr{IP: []byte{127, 0, 0, 1}, Port: 9090}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	wpConn := connection.NewReconnectWrapper(ctx, pConn, retry.NewConstant(time.Second*3),
-		watermill.NewStdLogger(true, true), addr, connection.DefaultErrorFilter)
+	wpConn := connection.NewReconnectWrapper(context.Background(), pConn, retry.NewConstant(time.Second*3),
+		watermill.NewStdLogger(true, true), addr, connection.DefaultErrorFilter, time.Second*4)
 
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
 		Conn:        wpConn,
 		RemoteAddr:  addr,
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
+		Logger:      watermill.NewStdLogger(true, true),
 	})
 	if err != nil {
 		log.Fatal(err)
