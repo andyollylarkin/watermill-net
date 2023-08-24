@@ -13,7 +13,7 @@ import (
 
 func main() {
 
-	pConn := connection.NewTCPConnection(net.Dialer{})
+	pConn := connection.NewTCPConnection(net.Dialer{}, time.Second*30)
 
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
 		Conn:        pConn,
