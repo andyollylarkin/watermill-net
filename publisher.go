@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -125,8 +124,6 @@ func (p *Publisher) Publish(topic string, messages ...*message.Message) error {
 }
 
 func (p *Publisher) handleResponse() error {
-	err := p.conn.SetReadDeadline(time.Now().Add(time.Second * 3))
-
 	r := bufio.NewReader(p.conn)
 	lenRaw, err := r.ReadBytes(internal.LenDelimiter)
 
