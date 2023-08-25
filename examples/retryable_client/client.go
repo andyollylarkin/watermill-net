@@ -24,7 +24,6 @@ func main() {
 		watermill.NewStdLogger(true, true), addr, connection.DefaultErrorFilter, time.Second*4)
 
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
-		RemoteAddr:  addr,
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 		Logger:      watermill.NewStdLogger(true, true),
@@ -35,7 +34,7 @@ func main() {
 
 	p.SetConnection(wpConn)
 
-	err = p.Connect()
+	err = p.Connect(addr)
 
 	if err != nil {
 		log.Fatal(err)

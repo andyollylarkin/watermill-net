@@ -17,7 +17,6 @@ import (
 )
 
 type PublisherConfig struct {
-	RemoteAddr  net.Addr
 	Marshaler   Marshaler
 	Unmarshaler Unmarshaler
 	Logger      watermill.LoggerAdapter
@@ -27,7 +26,6 @@ type Publisher struct {
 	conn        Connection
 	marshaler   Marshaler
 	unmarshaler Unmarshaler
-	addr        net.Addr
 	logger      watermill.LoggerAdapter
 	closed      bool
 	mu          sync.Mutex
@@ -42,7 +40,6 @@ func NewPublisher(config PublisherConfig, waitAck bool) (*Publisher, error) {
 	}
 
 	p := new(Publisher)
-	p.addr = config.RemoteAddr
 	p.marshaler = config.Marshaler
 	p.unmarshaler = config.Unmarshaler
 	p.logger = config.Logger
@@ -52,10 +49,6 @@ func NewPublisher(config PublisherConfig, waitAck bool) (*Publisher, error) {
 }
 
 func validatePublisherConfig(c PublisherConfig) error {
-	if c.RemoteAddr == nil {
-		return &InvalidConfigError{InvalidField: "Addr", InvalidReason: "cant be nil"}
-	}
-
 	if c.Marshaler == nil {
 		return &InvalidConfigError{InvalidField: "Marshaler", InvalidReason: "cant be nil"}
 	}
@@ -91,7 +84,7 @@ func (p *Publisher) GetConnection() (Connection, error) {
 }
 
 // Connect to remote side.
-func (p *Publisher) Connect() error {
+func (p *Publisher) Connect(addr net.Addr) error {
 	if p.closed {
 		return ErrPublisherClosed
 	}
@@ -100,7 +93,7 @@ func (p *Publisher) Connect() error {
 		return ErrConnectionNotSet
 	}
 
-	return p.conn.Connect(p.addr)
+	return p.conn.Connect(addr)
 }
 
 // Publish publishes provided messages to given topic.

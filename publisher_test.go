@@ -41,7 +41,6 @@ func TestPublishMessageRemoteSideReceiveOK(t *testing.T) {
 	pipeConn := NewPipeConnection()
 	uuid := watermill.NewUUID()
 	config := watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -65,7 +64,6 @@ func TestPublishMessageRemoteSideReceiveNackResponse(t *testing.T) {
 	pipeConn := NewPipeConnection()
 	uuid := watermill.NewUUID()
 	config := watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -91,7 +89,6 @@ func TestPublishMessageOnClosedPublisher(t *testing.T) {
 	pipeConn := NewPipeConnection()
 	uuid := watermill.NewUUID()
 	config := watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -122,18 +119,8 @@ func TestPublisherCreateError(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "Err Addr nil",
-			config: watermillnet.PublisherConfig{
-				RemoteAddr:  nil,
-				Marshaler:   pkg.MessagePackMarshaler{},
-				Unmarshaler: pkg.MessagePackUnmarshaler{},
-			},
-			expected: "invalid field: Addr. reason: cant be nil",
-		},
-		{
 			name: "Err Marshaler nil",
 			config: watermillnet.PublisherConfig{
-				RemoteAddr:  pipeAddr{},
 				Marshaler:   nil,
 				Unmarshaler: pkg.MessagePackUnmarshaler{},
 			},
@@ -142,7 +129,6 @@ func TestPublisherCreateError(t *testing.T) {
 		{
 			name: "Err Unmarshaler nil",
 			config: watermillnet.PublisherConfig{
-				RemoteAddr:  pipeAddr{},
 				Marshaler:   pkg.MessagePackMarshaler{},
 				Unmarshaler: nil,
 			},
@@ -168,7 +154,6 @@ func TestPublisherCreateOK(t *testing.T) {
 		{
 			name: "Publisher no error",
 			config: watermillnet.PublisherConfig{
-				RemoteAddr:  pipeAddr{},
 				Marshaler:   pkg.MessagePackMarshaler{},
 				Unmarshaler: pkg.MessagePackUnmarshaler{},
 			},
@@ -186,7 +171,6 @@ func TestPublisherCreateOK(t *testing.T) {
 func TestPublishToClosedPublisher(t *testing.T) {
 	conn := NewPipeConnection()
 	config := watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -204,7 +188,6 @@ func TestPublishMultiMessage(t *testing.T) {
 	pipeConn := NewPipeConnection()
 	uuid := watermill.NewUUID()
 	config := watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -232,7 +215,6 @@ func TestPublishMultiMessage(t *testing.T) {
 func TestConnectOnClosedPublisher(t *testing.T) {
 	conn := NewPipeConnection()
 	c := watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -242,14 +224,13 @@ func TestConnectOnClosedPublisher(t *testing.T) {
 	assert.NoError(t, err)
 	err = p.Close()
 	assert.NoError(t, err)
-	err = p.Connect()
+	err = p.Connect(pipeAddr{})
 	assert.ErrorIs(t, err, watermillnet.ErrPublisherClosed)
 }
 
 func TestConnectOK(t *testing.T) {
 	conn := NewPipeConnection()
 	c := watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}
@@ -257,14 +238,13 @@ func TestConnectOK(t *testing.T) {
 	p, err := watermillnet.NewPublisher(c, false)
 	p.SetConnection(conn)
 	assert.NoError(t, err)
-	err = p.Connect()
+	err = p.Connect(pipeAddr{})
 	assert.NoError(t, err)
 }
 
 func TestPublisherConnectionNotSetError(t *testing.T) {
 	retPub := func(t *testing.T) *watermillnet.Publisher {
 		p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
-			RemoteAddr:  pipeAddr{},
 			Marshaler:   pkg.MessagePackMarshaler{},
 			Unmarshaler: pkg.MessagePackUnmarshaler{},
 		}, false)
@@ -298,7 +278,7 @@ func TestPublisherConnectionNotSetError(t *testing.T) {
 		}, expect: watermillnet.ErrConnectionNotSet},
 		{name: "Connect", exec: func(t *testing.T) error {
 			p := retPub(t)
-			err := p.Connect()
+			err := p.Connect(pipeAddr{})
 
 			return err
 		}, expect: watermillnet.ErrConnectionNotSet},

@@ -108,13 +108,12 @@ func TestPublisherConnectError(t *testing.T) {
 func TestCloseWaitAllConns(t *testing.T) {
 	pipeConn := NewPipeConnection()
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}, false)
 	p.SetConnection(pipeConn)
 	require.NoError(t, err)
-	err = p.Connect()
+	err = p.Connect(pipeAddr{})
 	require.NoError(t, err)
 
 	s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
@@ -169,13 +168,12 @@ func TestCloseWaitAllConns(t *testing.T) {
 func TestCloseSocketConn(t *testing.T) {
 	pipeConn := NewPipeConnection()
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}, false)
 	p.SetConnection(pipeConn)
 	require.NoError(t, err)
-	err = p.Connect()
+	err = p.Connect(pipeAddr{})
 	require.NoError(t, err)
 
 	s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
@@ -200,13 +198,12 @@ func TestCloseSocketConn(t *testing.T) {
 func TestSubscriberCancelByContext(t *testing.T) {
 	pipeConn := NewPipeConnection()
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
-		RemoteAddr:  pipeAddr{},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}, false)
 	p.SetConnection(pipeConn)
 	require.NoError(t, err)
-	err = p.Connect()
+	err = p.Connect(pipeAddr{})
 	require.NoError(t, err)
 
 	s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
