@@ -17,3 +17,4 @@ build_examples:
 	go build -o ./bin/client ./examples/client/client.go
 	go build -o ./bin/rclient ./examples/retryable_client/client.go
 	go build -o ./bin/server ./examples/server.go
+	go build -o ./bin/rserver ./examples/retryable_server/server.go

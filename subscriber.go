@@ -170,8 +170,6 @@ func (s *Subscriber) Connect(l Listener) error {
 		}
 
 		s.conn = conn
-
-		go s.reconnect(l)
 	}
 
 	s.started = true
@@ -179,24 +177,6 @@ func (s *Subscriber) Connect(l Listener) error {
 	go s.readContent()
 
 	return nil
-}
-
-// reconnect wait new connection and replace existed connection.
-func (s *Subscriber) reconnect(l Listener) {
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			return
-		}
-
-		if s.logger != nil {
-			s.logger.Info("Client reconnected", watermill.LogFields{"addr": conn.RemoteAddr().String()})
-		}
-
-		s.mu.Lock()
-		s.conn = conn
-		s.mu.Unlock()
-	}
 }
 
 func (s *Subscriber) handle(ctx context.Context, readCh <-chan []byte, sub *sub) { //nolint: gocognit,funlen
@@ -326,7 +306,6 @@ func (s *Subscriber) readContent() {
 			s.mu.RLock()
 			s.conn.SetReadDeadline(time.Now().Add(readTimeout))
 			r := internal.NewTimeoutReader(s.conn, readTimeout)
-			// r := bufio.NewReader(s.conn)
 
 			lenRaw, err := r.ReadBytes(internal.LenDelimiter)
 			if err != nil {
