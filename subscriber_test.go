@@ -70,6 +70,7 @@ func TestPublisherConnectErrorClosed(t *testing.T) {
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	})
+	s.SetConnection(pipeConn)
 	require.NoError(t, err)
 	err = s.Close()
 	require.NoError(t, err)
@@ -248,6 +249,50 @@ func TestSubscriberCancelByContext(t *testing.T) {
 	cancel()
 	wg.Wait()
 	assert.Equal(t, true, complete)
+}
+
+func TestSubscriberConnectionNotSetError(t *testing.T) {
+	retPub := func(t *testing.T) *watermillnet.Subscriber {
+		s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
+			Marshaler:   pkg.MessagePackMarshaler{},
+			Unmarshaler: pkg.MessagePackUnmarshaler{},
+		})
+		require.NoError(t, err)
+
+		return s
+	}
+
+	tc := []struct {
+		name   string
+		exec   func(t *testing.T) error
+		expect error
+	}{
+		{name: "Get connection", exec: func(t *testing.T) error {
+			p := retPub(t)
+			_, err := p.GetConnection()
+
+			return err
+		}, expect: watermillnet.ErrConnectionNotSet},
+		{name: "Subscribe", exec: func(t *testing.T) error {
+			p := retPub(t)
+			_, err := p.Subscribe(context.Background(), "")
+
+			return err
+		}, expect: watermillnet.ErrConnectionNotSet},
+		{name: "Close", exec: func(t *testing.T) error {
+			p := retPub(t)
+			err := p.Close()
+
+			return err
+		}, expect: watermillnet.ErrConnectionNotSet},
+	}
+
+	for _, c := range tc {
+		t.Run(c.name, func(t *testing.T) {
+			res := c.exec(t)
+			assert.ErrorIs(t, res, c.expect)
+		})
+	}
 }
 
 // Subscribe topic independent

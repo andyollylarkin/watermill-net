@@ -260,3 +260,54 @@ func TestConnectOK(t *testing.T) {
 	err = p.Connect()
 	assert.NoError(t, err)
 }
+
+func TestPublisherConnectionNotSetError(t *testing.T) {
+	retPub := func(t *testing.T) *watermillnet.Publisher {
+		p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
+			RemoteAddr:  pipeAddr{},
+			Marshaler:   pkg.MessagePackMarshaler{},
+			Unmarshaler: pkg.MessagePackUnmarshaler{},
+		}, false)
+		require.NoError(t, err)
+
+		return p
+	}
+
+	tc := []struct {
+		name   string
+		exec   func(t *testing.T) error
+		expect error
+	}{
+		{name: "Get connection", exec: func(t *testing.T) error {
+			p := retPub(t)
+			_, err := p.GetConnection()
+
+			return err
+		}, expect: watermillnet.ErrConnectionNotSet},
+		{name: "Publish", exec: func(t *testing.T) error {
+			p := retPub(t)
+			err := p.Publish("", message.NewMessage("", nil))
+
+			return err
+		}, expect: watermillnet.ErrConnectionNotSet},
+		{name: "Close", exec: func(t *testing.T) error {
+			p := retPub(t)
+			err := p.Close()
+
+			return err
+		}, expect: watermillnet.ErrConnectionNotSet},
+		{name: "Connect", exec: func(t *testing.T) error {
+			p := retPub(t)
+			err := p.Connect()
+
+			return err
+		}, expect: watermillnet.ErrConnectionNotSet},
+	}
+
+	for _, c := range tc {
+		t.Run(c.name, func(t *testing.T) {
+			res := c.exec(t)
+			assert.ErrorIs(t, res, c.expect)
+		})
+	}
+}

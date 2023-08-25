@@ -350,6 +350,12 @@ func (s *Subscriber) readContent() {
 func (s *Subscriber) Close() error {
 	s.mu.Lock()
 
+	if s.conn == nil {
+		s.mu.Unlock()
+
+		return ErrConnectionNotSet
+	}
+
 	for _, v := range s.subscribers {
 		if !v.Closed {
 			v.Closed = true
@@ -365,13 +371,8 @@ func (s *Subscriber) Close() error {
 	s.processWg.Wait()
 
 	s.mu.Lock()
-	if s.conn != nil {
-		err := s.conn.Close()
-		s.mu.Unlock()
-
-		return err
-	}
+	err := s.conn.Close()
 	s.mu.Unlock()
 
-	return nil
+	return err
 }
