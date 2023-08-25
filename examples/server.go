@@ -6,16 +6,19 @@ import (
 	"log"
 	"net"
 
+	"github.com/ThreeDotsLabs/watermill"
 	watermillnet "github.com/andyollylarkin/watermill-net"
 	"github.com/andyollylarkin/watermill-net/pkg"
 	"github.com/andyollylarkin/watermill-net/pkg/connection"
 )
 
 func main() {
+	logger := watermill.NewStdLogger(true, true)
 	l, _ := net.Listen("tcp4", "127.0.0.1:9090")
 	s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
+		Logger:      logger,
 	})
 
 	if err != nil {

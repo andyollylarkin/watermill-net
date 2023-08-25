@@ -304,6 +304,57 @@ func TestAllowNilListenerWhenConnectionSet(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// Subscribe topic independent
+// func TestCancelConsumeWhenReadEOF(t *testing.T) {
+// 	pc := connection.NewTCPConnection(net.Dialer{}, time.Hour)
+// 	nl, err := net.Listen("tcp4", ":0")
+// 	require.NoError(t, err)
 
-// Susccribe receive multi message
+// 	l := connection.NewTCP4Listener(nl)
+
+// 	var wg sync.WaitGroup
+
+// 	wg.Add(1)
+
+// 	go func() {
+// 		_, err := l.Accept()
+// 		require.NoError(t, err)
+// 		// sconn.Close()
+// 		wg.Done()
+// 	}()
+
+// 	err = pc.Connect(nl.Addr())
+// 	require.NoError(t, err)
+// 	wg.Wait()
+
+// 	b := make([]byte, 10)
+// 	_, err = pc.Read(b)
+// 	require.ErrorIs(t, err, io.EOF)
+
+// 	s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
+// 		Marshaler:   pkg.MessagePackMarshaler{},
+// 		Unmarshaler: pkg.MessagePackUnmarshaler{},
+// 	})
+// 	require.NoError(t, err)
+// 	s.SetConnection(pc)
+// 	err = s.Connect(nil)
+// 	require.NoError(t, err)
+
+// 	sub, err := s.Subscribe(context.Background(), "")
+
+// 	var mu sync.Mutex
+// 	var done bool = false
+
+// 	wg.Add(1)
+// 	go func() {
+// 		for range sub {
+// 		}
+
+// 		mu.Lock()
+// 		done = true
+// 		mu.Unlock()
+// 		wg.Done()
+// 	}()
+
+// 	wg.Wait()
+// 	require.Equal(t, true, done)
+// }

@@ -2,6 +2,7 @@ package watermillnet
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -145,6 +146,8 @@ func (s *Subscriber) GetConnection() (Connection, error) {
 }
 
 // Connect establish connection.
+// If connection was set via SetConnection, we should pass nil to l.
+// If listener was set, subscriber will be waiting until the client reconnects when the connection is lost.
 func (s *Subscriber) Connect(l Listener) error {
 	if l == nil && s.conn == nil {
 		return fmt.Errorf("listener cant be nil")
@@ -182,6 +185,10 @@ func (s *Subscriber) reconnect(l Listener) {
 		conn, err := l.Accept()
 		if err != nil {
 			return
+		}
+
+		if s.logger != nil {
+			s.logger.Info("Client reconnected", watermill.LogFields{"addr": conn.RemoteAddr().String()})
 		}
 
 		s.mu.Lock()
@@ -226,6 +233,12 @@ func (s *Subscriber) handle(ctx context.Context, readCh <-chan []byte, sub *sub)
 				if s.logger != nil {
 					s.logger.Error("Error unmarshal incoming message", err, nil)
 				}
+				s.mu.RUnlock()
+
+				continue
+			}
+
+			if msg.Message == nil {
 				s.mu.RUnlock()
 
 				continue
@@ -314,7 +327,7 @@ func (s *Subscriber) readContent() {
 
 			lenRaw, err := r.ReadBytes(internal.LenDelimiter)
 			if err != nil {
-				if s.logger != nil {
+				if s.logger != nil && !errors.Is(err, io.EOF) {
 					s.logger.Error("Error read message", err, nil)
 				}
 
