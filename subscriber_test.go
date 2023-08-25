@@ -292,6 +292,18 @@ func TestSubscriberConnectionNotSetError(t *testing.T) {
 	}
 }
 
+func TestAllowNilListenerWhenConnectionSet(t *testing.T) {
+	pc := NewPipeConnection()
+	s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
+		Marshaler:   pkg.MessagePackMarshaler{},
+		Unmarshaler: pkg.MessagePackUnmarshaler{},
+	})
+	require.NoError(t, err)
+	s.SetConnection(pc)
+	err = s.Connect(nil)
+	require.NoError(t, err)
+}
+
 // Subscribe topic independent
 
 // Susccribe receive multi message

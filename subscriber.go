@@ -146,7 +146,7 @@ func (s *Subscriber) GetConnection() (Connection, error) {
 
 // Connect establish connection.
 func (s *Subscriber) Connect(l Listener) error {
-	if l == nil {
+	if l == nil && s.conn == nil {
 		return fmt.Errorf("listener cant be nil")
 	}
 
