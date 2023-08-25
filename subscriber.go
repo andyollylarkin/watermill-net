@@ -366,9 +366,10 @@ func (s *Subscriber) Close() error {
 
 	s.mu.Lock()
 	if s.conn != nil {
+		err := s.conn.Close()
 		s.mu.Unlock()
 
-		return s.conn.Close()
+		return err
 	}
 	s.mu.Unlock()
 

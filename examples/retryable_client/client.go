@@ -24,7 +24,6 @@ func main() {
 		watermill.NewStdLogger(true, true), addr, connection.DefaultErrorFilter, time.Second*4)
 
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
-		Conn:        wpConn,
 		RemoteAddr:  addr,
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
@@ -33,6 +32,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	p.SetConnection(wpConn)
 
 	err = p.Connect()
 
@@ -48,6 +49,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+
 			time.Sleep(time.Second * 2)
 		}
 	}()
@@ -59,6 +61,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		time.Sleep(time.Second * 2)
 	}
 }

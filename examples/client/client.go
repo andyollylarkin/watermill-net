@@ -16,11 +16,12 @@ func main() {
 	pConn := connection.NewTCPConnection(net.Dialer{}, time.Second*30)
 
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
-		Conn:        pConn,
 		RemoteAddr:  &net.TCPAddr{IP: []byte{127, 0, 0, 1}, Port: 9090},
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 	}, false)
+	p.SetConnection(pConn)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,6 +40,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+
 			time.Sleep(time.Second * 2)
 		}
 	}()
@@ -50,6 +52,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		time.Sleep(time.Second * 2)
 	}
 }
