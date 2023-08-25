@@ -3,6 +3,7 @@ package watermillnet
 import (
 	"errors"
 	"fmt"
+	"os"
 )
 
 type InvalidConfigError struct {
@@ -19,6 +20,6 @@ var (
 	ErrSubscriberClosed     = errors.New("subscriber closed")
 	ErrSubscriberNotStarted = errors.New("subscriber not started")
 	ErrNacked               = errors.New("remote side sent nack for message")
-	ErrIOTimeout            = errors.New("i/o timeout")
+	ErrIOTimeout            = os.ErrDeadlineExceeded
 	ErrConnectionNotSet     = errors.New("connection not set")
 )

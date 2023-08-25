@@ -13,6 +13,8 @@ import (
 	"github.com/andyollylarkin/watermill-net/internal"
 )
 
+const maxBodyLen = 20 << 30
+
 type sub struct {
 	Topic   string
 	MsgChan chan *message.Message // client message chan
@@ -314,7 +316,7 @@ func (s *Subscriber) sendAck(ack bool, uuid string) error {
 }
 
 func (s *Subscriber) readContent() {
-	var readTimeout = time.Second * 3
+	var readTimeout = time.Second * 5
 
 	for {
 		select {
@@ -324,6 +326,7 @@ func (s *Subscriber) readContent() {
 			s.mu.RLock()
 			s.conn.SetReadDeadline(time.Now().Add(readTimeout))
 			r := internal.NewTimeoutReader(s.conn, readTimeout)
+			// r := bufio.NewReader(s.conn)
 
 			lenRaw, err := r.ReadBytes(internal.LenDelimiter)
 			if err != nil {
@@ -337,6 +340,14 @@ func (s *Subscriber) readContent() {
 			}
 
 			readLen := internal.ReadLen(lenRaw[:len(lenRaw)-1]) // trim len delimiter
+			if readLen <= 0 || readLen > maxBodyLen {
+				if s.logger != nil {
+					s.logger.Info("Message body out of range", watermill.LogFields{"len": readLen})
+				}
+
+				continue
+			}
+
 			lr := io.LimitReader(r, int64(readLen))
 
 			respBody := make([]byte, readLen)

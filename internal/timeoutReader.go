@@ -1,13 +1,15 @@
 package internal
 
 import (
+	"bufio"
 	"bytes"
-	"net"
-	"strings"
+	"errors"
+	"os"
 	"time"
 )
 
 type TimeoutReader struct {
+	bufioReader        bufio.Reader
 	r                  ReadDeadliner
 	extendReadDeadline time.Duration
 }
@@ -16,61 +18,64 @@ type TimeoutReader struct {
 // If another error occurs reader return that error.
 func NewTimeoutReader(r ReadDeadliner, extendReadDeadline time.Duration) *TimeoutReader {
 	tr := new(TimeoutReader)
+	tr.bufioReader = *bufio.NewReader(r)
 	tr.r = r
-	tr.extendReadDeadline = extendReadDeadline
 
 	return tr
 }
 
 func (tr *TimeoutReader) ReadBytes(delim byte) ([]byte, error) {
-	var out bytes.Buffer
-
-	var bufSize int = 1
-
-	buf := make([]byte, bufSize)
+	var outBuf bytes.Buffer
 
 	for {
-		n, err := tr.r.Read(buf)
+		readed, err := tr.bufioReader.ReadBytes(LenDelimiter)
+		outBuf.Write(readed)
 
-		// if has error and no read bytes
-		if err != nil && n == 0 {
-			return out.Bytes(), err
-		}
-
-		if err != nil && n > 0 {
-			e, ok := err.(*net.OpError)
-			if ok && strings.Contains(e.Error(), "i/o timeout") {
+		if err != nil {
+			if isTimeoutErr(err) && len(readed) > 0 {
 				tr.r.SetReadDeadline(time.Now().Add(tr.extendReadDeadline))
-				out.Write(buf)
-				cleanSlice(buf)
 
 				continue
 			} else {
-				out.Write(buf)
-
-				return out.Bytes(), e
+				return outBuf.Bytes(), err
 			}
-		}
-
-		pos := bytes.IndexByte(buf, delim)
-
-		if pos == -1 {
-			out.Write(buf)
-			cleanSlice(buf)
-
-			continue
 		} else {
-			out.Write(buf[0 : pos+1])
-
 			break
 		}
 	}
 
-	return out.Bytes(), nil
+	return outBuf.Bytes(), nil
+}
+
+func isTimeoutErr(err error) bool {
+	return errors.Is(err, os.ErrDeadlineExceeded)
 }
 
 func (tr *TimeoutReader) Read(p []byte) (int, error) {
-	return tr.r.Read(p)
+	var outBuf bytes.Buffer
+
+	for {
+		tmpBuf := make([]byte, len(p))
+		n, err := tr.bufioReader.Read(tmpBuf)
+		outBuf.Write(tmpBuf)
+
+		if err != nil {
+			if isTimeoutErr(err) && n > 0 {
+				tr.r.SetReadDeadline(time.Now().Add(tr.extendReadDeadline))
+
+				continue
+			} else {
+				copy(p, outBuf.Bytes())
+
+				return n, err
+			}
+		} else {
+			break
+		}
+	}
+	copy(p, outBuf.Bytes())
+
+	return outBuf.Len(), nil
 }
 
 func cleanSlice(src []byte) {

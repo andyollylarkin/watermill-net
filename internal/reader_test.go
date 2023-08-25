@@ -91,6 +91,6 @@ func TestReaderErrorTimeoutButFullRead(t *testing.T) {
 	r := internal.NewTimeoutReader(&tr, time.Duration(0))
 
 	content, err := r.ReadBytes(delimiter)
-	require.ErrorIs(t, err, io.EOF)
+	require.NoError(t, err)
 	assert.Equal(t, "Hello", string(content[:len(content)-1]))
 }
