@@ -123,6 +123,7 @@ func (s *Subscriber) Subscribe(ctx context.Context, topic string) (<-chan *messa
 func (s *Subscriber) SetConnection(c Connection) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.started = true
 
 	s.conn = c
 }
