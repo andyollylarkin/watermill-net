@@ -14,9 +14,9 @@ type TCP4Connection struct {
 	Closed         bool
 }
 
-func NewTCPConnection(dialer net.Dialer, keepAlive time.Duration) *TCP4Connection {
+func NewTCPConnection(keepAlive time.Duration) *TCP4Connection {
 	c := new(TCP4Connection)
-	c.dialer = dialer
+	c.dialer = net.Dialer{}
 	c.dialer.KeepAlive = keepAlive
 
 	return c

@@ -15,7 +15,7 @@ func TestTCP4Connection(t *testing.T) {
 	l, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 
-	pConn := connection.NewTCPConnection(net.Dialer{}, time.Second*30)
+	pConn := connection.NewTCPConnection(time.Second * 30)
 
 	err = pConn.Connect(l.Addr())
 	require.NoError(t, err)

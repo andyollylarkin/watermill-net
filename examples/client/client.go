@@ -13,7 +13,7 @@ import (
 
 func main() {
 
-	pConn := connection.NewTCPConnection(net.Dialer{}, time.Second*30)
+	pConn := connection.NewTCPConnection(time.Second * 30)
 
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
 		Marshaler:   pkg.MessagePackMarshaler{},
