@@ -18,9 +18,9 @@ Issues: https://github.com/ThreeDotsLabs/watermill/issues
 
 ## Characteristics
 - [ ] ConsumerGroups
-- [ ] xactlyOnceDelivery
-- [ ] uaranteedOrder
-- [ ] ersistent
+- [ ] ExactlyOnceDelivery
+- [ ] GuaranteedOrder
+- [ ] Persistent
 
 ## Contributing
 
