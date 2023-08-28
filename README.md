@@ -16,6 +16,12 @@ Getting started guide: https://watermill.io/docs/getting-started/
 
 Issues: https://github.com/ThreeDotsLabs/watermill/issues
 
+## Characteristics
+- ConsumerGroups [ ]
+- ExactlyOnceDelivery [ ]
+- GuaranteedOrder [ ]
+- Persistent [ ]
+
 ## Contributing
 
 All contributions are very much welcome. If you'd like to help with Watermill development,
