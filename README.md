@@ -17,10 +17,10 @@ Getting started guide: https://watermill.io/docs/getting-started/
 Issues: https://github.com/ThreeDotsLabs/watermill/issues
 
 ## Characteristics
-- ConsumerGroups [ ]
-- ExactlyOnceDelivery [ ]
-- GuaranteedOrder [ ]
-- Persistent [ ]
+- [ ] ConsumerGroups
+- [ ] xactlyOnceDelivery
+- [ ] uaranteedOrder
+- [ ] ersistent
 
 ## Contributing
 
