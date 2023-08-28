@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 
@@ -9,6 +10,7 @@ import (
 	watermillnet "github.com/andyollylarkin/watermill-net"
 	"github.com/andyollylarkin/watermill-net/pkg"
 	"github.com/andyollylarkin/watermill-net/pkg/connection"
+	connectionhelpers "github.com/andyollylarkin/watermill-net/pkg/helpers/connectionHelpers"
 )
 
 func main() {
@@ -23,7 +25,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	t4L, err := connection.NewTCP4Listener(":9090")
+	certs, err := connectionhelpers.LoadCerts("/home/denis/Desktop/local.test.ru.crt",
+		"/home/denis/Desktop/local.test.ru.key")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	t4L, err := connection.NewTCP4TlsListener(":9090", &tls.Config{
+		Certificates: certs,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}

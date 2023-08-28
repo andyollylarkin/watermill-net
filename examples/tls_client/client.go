@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"net"
 	"time"
@@ -9,11 +10,24 @@ import (
 	watermillnet "github.com/andyollylarkin/watermill-net"
 	"github.com/andyollylarkin/watermill-net/pkg"
 	"github.com/andyollylarkin/watermill-net/pkg/connection"
+	connectionhelpers "github.com/andyollylarkin/watermill-net/pkg/helpers/connectionHelpers"
 )
 
 func main() {
+	certs, err := connectionhelpers.LoadCerts("/home/denis/Desktop/local.test.ru.crt",
+		"/home/denis/Desktop/local.test.ru.key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	rootCert, err := connectionhelpers.LoadCertPool("/home/denis/Documents/rootca.crt")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	pConn := connection.NewTCPConnection(time.Second * 30)
+	pConn := connection.NewTCPTlsConnection(time.Minute*3, &tls.Config{
+		Certificates: certs,
+		RootCAs:      rootCert,
+	})
 
 	p, err := watermillnet.NewPublisher(watermillnet.PublisherConfig{
 		Marshaler:   pkg.MessagePackMarshaler{},
