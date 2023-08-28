@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillnet "github.com/andyollylarkin/watermill-net"
@@ -14,18 +13,18 @@ import (
 
 func main() {
 	logger := watermill.NewStdLogger(true, true)
-	l, _ := net.Listen("tcp4", "127.0.0.1:9090")
 	s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},
 		Logger:      logger,
 	})
 
+	l, err := connection.NewTCP4Listener(":9090")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = s.Connect(connection.NewTCP4Listener(l))
+	err = s.Connect(l)
 
 	if err != nil {
 		log.Fatal(err)
@@ -47,6 +46,7 @@ func main() {
 			m.Ack()
 		}
 	}()
+
 	for m := range sch2 {
 		fmt.Println(2, string(m.Payload))
 		m.Ack()

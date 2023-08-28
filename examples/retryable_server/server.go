@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -15,8 +14,12 @@ import (
 
 func main() {
 	logger := watermill.NewStdLogger(true, true)
-	l, _ := net.Listen("tcp4", "127.0.0.1:9090")
-	lNet := connection.NewTCP4Listener(l)
+
+	lNet, err := connection.NewTCP4Listener(":9090")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	s, err := watermillnet.NewSubscriber(watermillnet.SubscriberConfig{
 		Marshaler:   pkg.MessagePackMarshaler{},
 		Unmarshaler: pkg.MessagePackUnmarshaler{},

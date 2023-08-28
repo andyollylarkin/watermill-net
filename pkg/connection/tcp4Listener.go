@@ -13,11 +13,17 @@ type TCP4Listener struct {
 	mu   sync.Mutex
 }
 
-func NewTCP4Listener(l net.Listener) *TCP4Listener {
+func NewTCP4Listener(addr string) (*TCP4Listener, error) {
 	tl := new(TCP4Listener)
+
+	l, err := net.Listen("tcp4", addr)
+	if err != nil {
+		return nil, err
+	}
+
 	tl.l = l
 
-	return tl
+	return tl, nil
 }
 
 // Accept waits for and returns the next connection to the listener.
@@ -46,7 +52,7 @@ func (tl *TCP4Listener) Close() error {
 	tl.mu.Lock()
 	defer tl.mu.Unlock()
 
-	return tl.conn.Close()
+	return tl.l.Close()
 }
 
 // Addr returns the listener's network address.
@@ -54,5 +60,5 @@ func (tl *TCP4Listener) Addr() net.Addr {
 	tl.mu.Lock()
 	defer tl.mu.Unlock()
 
-	return tl.conn.LocalAddr()
+	return tl.l.Addr()
 }

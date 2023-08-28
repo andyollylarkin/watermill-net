@@ -2,7 +2,6 @@ package connection_test
 
 import (
 	"bufio"
-	"net"
 	"testing"
 	"time"
 
@@ -12,15 +11,12 @@ import (
 )
 
 func TestTCP4Connection(t *testing.T) {
-	l, err := net.Listen("tcp", ":0")
-	require.NoError(t, err)
-
 	pConn := connection.NewTCPConnection(time.Second * 30)
 
-	err = pConn.Connect(l.Addr())
+	sListener, err := connection.NewTCP4Listener(":0")
 	require.NoError(t, err)
-
-	sListener := connection.NewTCP4Listener(l)
+	err = pConn.Connect(sListener.Addr())
+	require.NoError(t, err)
 	sConn, err := sListener.Accept()
 	require.NoError(t, err)
 
