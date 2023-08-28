@@ -18,8 +18,8 @@ type TCP4TlsConnection struct {
 	Closed         bool
 }
 
-// NewTCPTlsConnectionWithConfig create new TCP4TlsConnection with predefined tls config.
-func NewTCPTlsConnectionWithConfig(keepAlive time.Duration, config *tls.Config) *TCP4TlsConnection {
+// NewTCPTlsConnection create new TCP4TlsConnection with predefined tls config.
+func NewTCPTlsConnection(keepAlive time.Duration, config *tls.Config) *TCP4TlsConnection {
 	c := new(TCP4TlsConnection)
 	dialer := tls.Dialer{
 		NetDialer: &net.Dialer{

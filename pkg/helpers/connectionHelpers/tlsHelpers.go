@@ -1,6 +1,7 @@
 package connectionhelpers
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 
 	"go.step.sm/crypto/pemutil"
@@ -17,4 +18,13 @@ func LoadCertPool(rootCAPath string) (*x509.CertPool, error) {
 	cp.AddCert(cert)
 
 	return cp, nil
+}
+
+func LoadCerts(certPath, keyPath string) ([]tls.Certificate, error) {
+	c, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return []tls.Certificate{c}, nil
 }
