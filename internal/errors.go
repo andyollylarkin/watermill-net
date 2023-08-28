@@ -1,14 +1,10 @@
 package internal
 
-import "net"
+import (
+	"errors"
+	"os"
+)
 
 func IsTimeoutError(err error) bool {
-	if err != nil {
-		e, ok := err.(*net.OpError)
-		if ok && e.Timeout() {
-			return true
-		}
-	}
-
-	return false
+	return errors.Is(err, os.ErrDeadlineExceeded)
 }
