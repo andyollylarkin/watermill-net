@@ -157,7 +157,7 @@ func (rw *ReconnectWrapper) Read(b []byte) (n int, err error) { //nolint:dupl
 
 			if rw.logger != nil {
 				rw.logger.Debug("Reread message",
-					watermill.LogFields{"op": "write"})
+					watermill.LogFields{"op": "read"})
 			}
 
 			continue

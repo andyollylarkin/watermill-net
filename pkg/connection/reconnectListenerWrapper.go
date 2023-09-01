@@ -72,9 +72,6 @@ func (rw *ReconnectListenerWrapper) reconnectUnlock() {
 }
 
 func (rw *ReconnectListenerWrapper) reconnect() error {
-	rw.mu.Lock()
-	defer rw.mu.Unlock()
-
 	rw.reconnectLock()
 	defer rw.reconnectUnlock()
 
@@ -153,7 +150,7 @@ func (rw *ReconnectListenerWrapper) Read(b []byte) (n int, err error) { //nolint
 
 			if rw.logger != nil {
 				rw.logger.Debug("Reread message",
-					watermill.LogFields{"op": "write"})
+					watermill.LogFields{"op": "read"})
 			}
 
 			continue
@@ -185,7 +182,7 @@ func (rw *ReconnectListenerWrapper) Write(b []byte) (n int, err error) { //nolin
 			// dont reconnect when timeout happens
 			if internal.IsTimeoutError(err) {
 				if rw.logger != nil {
-					rw.logger.Info("Timeout", watermill.LogFields{"op": "read"})
+					rw.logger.Info("Timeout", watermill.LogFields{"op": "write"})
 				}
 
 				return n, watermillnet.ErrIOTimeout
